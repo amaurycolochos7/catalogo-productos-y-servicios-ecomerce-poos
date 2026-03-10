@@ -42,6 +42,24 @@ CREATE TABLE IF NOT EXISTS servicios (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Tabla de imágenes de productos (galería)
+CREATE TABLE IF NOT EXISTS producto_imagenes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+  imagen_url TEXT NOT NULL,
+  orden INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Tabla de imágenes de servicios (galería)
+CREATE TABLE IF NOT EXISTS servicio_imagenes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  servicio_id UUID NOT NULL REFERENCES servicios(id) ON DELETE CASCADE,
+  imagen_url TEXT NOT NULL,
+  orden INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- Tabla de configuración del negocio (PERSONALIZACIÓN TOTAL)
 CREATE TABLE IF NOT EXISTS configuracion (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -100,6 +118,8 @@ ALTER TABLE categorias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE servicios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE configuracion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE producto_imagenes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE servicio_imagenes ENABLE ROW LEVEL SECURITY;
 
 
 -- 3. POLÍTICAS DE ACCESO PÚBLICO (lectura para todos)
@@ -133,6 +153,16 @@ CREATE POLICY "Admin insertar servicios" ON servicios FOR INSERT TO authenticate
 CREATE POLICY "Admin actualizar servicios" ON servicios FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Admin eliminar servicios" ON servicios FOR DELETE TO authenticated USING (true);
 
+CREATE POLICY "Lectura pública de imágenes productos" ON producto_imagenes FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin insertar imágenes productos" ON producto_imagenes FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Admin actualizar imágenes productos" ON producto_imagenes FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Admin eliminar imágenes productos" ON producto_imagenes FOR DELETE TO authenticated USING (true);
+
+CREATE POLICY "Lectura pública de imágenes servicios" ON servicio_imagenes FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin insertar imágenes servicios" ON servicio_imagenes FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Admin actualizar imágenes servicios" ON servicio_imagenes FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Admin eliminar imágenes servicios" ON servicio_imagenes FOR DELETE TO authenticated USING (true);
+
 CREATE POLICY "Admin insertar configuración" ON configuracion FOR INSERT TO authenticated WITH CHECK (true);
 CREATE POLICY "Admin actualizar configuración" ON configuracion FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Admin eliminar configuración" ON configuracion FOR DELETE TO authenticated USING (true);
@@ -145,24 +175,25 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES
   ('productos', 'productos', true),
   ('servicios', 'servicios', true),
-  ('configuracion', 'configuracion', true)
+  ('configuracion', 'configuracion', true),
+  ('categorias', 'categorias', true)
 ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "Imágenes públicas lectura"
   ON storage.objects FOR SELECT TO anon, authenticated
-  USING (bucket_id IN ('productos', 'servicios', 'configuracion'));
+  USING (bucket_id IN ('productos', 'servicios', 'configuracion', 'categorias'));
 
 CREATE POLICY "Admin subir imágenes"
   ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id IN ('productos', 'servicios', 'configuracion'));
+  WITH CHECK (bucket_id IN ('productos', 'servicios', 'configuracion', 'categorias'));
 
 CREATE POLICY "Admin actualizar imágenes"
   ON storage.objects FOR UPDATE TO authenticated
-  USING (bucket_id IN ('productos', 'servicios', 'configuracion'));
+  USING (bucket_id IN ('productos', 'servicios', 'configuracion', 'categorias'));
 
 CREATE POLICY "Admin eliminar imágenes"
   ON storage.objects FOR DELETE TO authenticated
-  USING (bucket_id IN ('productos', 'servicios', 'configuracion'));
+  USING (bucket_id IN ('productos', 'servicios', 'configuracion', 'categorias'));
 
 
 -- 6. DATOS DE EJEMPLO

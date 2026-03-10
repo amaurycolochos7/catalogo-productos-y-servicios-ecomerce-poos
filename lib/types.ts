@@ -21,6 +21,15 @@ export interface Producto {
   activo: boolean;
   created_at: string;
   categorias?: Categoria;
+  imagenes?: ProductoImagen[];
+}
+
+export interface ProductoImagen {
+  id: string;
+  producto_id: string;
+  imagen_url: string;
+  orden: number;
+  created_at: string;
 }
 
 export interface Servicio {
@@ -30,6 +39,15 @@ export interface Servicio {
   precio: number;
   imagen_url: string | null;
   activo: boolean;
+  created_at: string;
+  imagenes?: ServicioImagen[];
+}
+
+export interface ServicioImagen {
+  id: string;
+  servicio_id: string;
+  imagen_url: string;
+  orden: number;
   created_at: string;
 }
 

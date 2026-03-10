@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { Servicio } from '@/lib/types';
+import type { Servicio, ServicioImagen } from '@/lib/types';
 
 export default function AdminServicios() {
     const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -16,6 +16,12 @@ export default function AdminServicios() {
     const [precio, setPrecio] = useState('');
     const [activo, setActivo] = useState(true);
 
+    // Galería de imágenes
+    const [nuevasImagenes, setNuevasImagenes] = useState<File[]>([]);
+    const [imagenesExistentes, setImagenesExistentes] = useState<ServicioImagen[]>([]);
+    const [imagenesAEliminar, setImagenesAEliminar] = useState<ServicioImagen[]>([]);
+    const [previews, setPreviews] = useState<string[]>([]);
+
     const supabase = createClient();
 
     const cargarDatos = useCallback(async () => {
@@ -27,46 +33,168 @@ export default function AdminServicios() {
 
     useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
-    const abrirModal = (serv?: Servicio) => {
+    const abrirModal = async (serv?: Servicio) => {
         if (serv) {
             setEditando(serv);
             setNombre(serv.nombre);
             setDescripcion(serv.descripcion || '');
             setPrecio(serv.precio.toString());
             setActivo(serv.activo);
+
+            // Cargar imágenes existentes
+            const { data } = await supabase
+                .from('servicio_imagenes')
+                .select('*')
+                .eq('servicio_id', serv.id)
+                .order('orden');
+            setImagenesExistentes((data as ServicioImagen[]) || []);
         } else {
             setEditando(null);
             setNombre('');
             setDescripcion('');
             setPrecio('');
             setActivo(true);
+            setImagenesExistentes([]);
         }
+        setNuevasImagenes([]);
+        setPreviews([]);
+        setImagenesAEliminar([]);
         setModalAbierto(true);
     };
 
     const cerrarModal = () => { setModalAbierto(false); setEditando(null); };
 
+    const handleAgregarImagenes = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setNuevasImagenes(prev => [...prev, ...files]);
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviews(prev => [...prev, reader.result as string]);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        e.target.value = '';
+    };
+
+    const eliminarNuevaImagen = (index: number) => {
+        setNuevasImagenes(prev => prev.filter((_, i) => i !== index));
+        setPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const marcarParaEliminar = (imagen: ServicioImagen) => {
+        setImagenesAEliminar(prev => [...prev, imagen]);
+        setImagenesExistentes(prev => prev.filter(img => img.id !== imagen.id));
+    };
+
+    const subirImagen = async (file: File): Promise<string> => {
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
+        const { error } = await supabase.storage
+            .from('servicios')
+            .upload(fileName, file);
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+            .from('servicios')
+            .getPublicUrl(fileName);
+
+        return urlData.publicUrl;
+    };
+
     const guardar = async (e: React.FormEvent) => {
         e.preventDefault();
         setGuardando(true);
         try {
-            const datos = { nombre, descripcion, precio: parseFloat(precio), activo };
+            // 1. Eliminar imágenes marcadas
+            for (const img of imagenesAEliminar) {
+                const path = img.imagen_url.split('/servicios/')[1];
+                if (path) {
+                    await supabase.storage.from('servicios').remove([path]);
+                }
+                await supabase.from('servicio_imagenes').delete().eq('id', img.id);
+            }
+
+            // 2. Subir nuevas imágenes
+            const nuevasUrls: string[] = [];
+            for (const file of nuevasImagenes) {
+                const url = await subirImagen(file);
+                nuevasUrls.push(url);
+            }
+
+            // 3. Determinar imagen principal
+            const todasLasImagenes = [
+                ...imagenesExistentes.map(img => img.imagen_url),
+                ...nuevasUrls
+            ];
+            const imagenPrincipal = todasLasImagenes[0] || null;
+
+            // 4. Guardar servicio
+            const datos = {
+                nombre,
+                descripcion,
+                precio: parseFloat(precio),
+                activo,
+                imagen_url: imagenPrincipal,
+            };
+
+            let servicioId = editando?.id;
+
             if (editando) {
                 await supabase.from('servicios').update(datos).eq('id', editando.id);
             } else {
-                await supabase.from('servicios').insert(datos);
+                const { data } = await supabase.from('servicios').insert(datos).select('id').single();
+                servicioId = data?.id;
             }
+
+            // 5. Insertar nuevas imágenes en servicio_imagenes
+            if (servicioId && nuevasUrls.length > 0) {
+                const maxOrden = imagenesExistentes.length;
+                const registros = nuevasUrls.map((url, i) => ({
+                    servicio_id: servicioId,
+                    imagen_url: url,
+                    orden: maxOrden + i,
+                }));
+                await supabase.from('servicio_imagenes').insert(registros);
+            }
+
             cerrarModal();
             cargarDatos();
-        } catch { alert('Error al guardar'); }
+        } catch (err) {
+            console.error('Error al guardar:', err);
+            alert('Error al guardar el servicio');
+        }
         finally { setGuardando(false); }
     };
 
     const eliminar = async (id: string) => {
         if (!confirm('¿Eliminar este servicio?')) return;
+
+        // Eliminar imágenes del storage
+        const { data: imagenes } = await supabase
+            .from('servicio_imagenes')
+            .select('imagen_url')
+            .eq('servicio_id', id);
+
+        if (imagenes) {
+            const paths = imagenes
+                .map(img => img.imagen_url.split('/servicios/')[1])
+                .filter(Boolean);
+            if (paths.length > 0) {
+                await supabase.storage.from('servicios').remove(paths);
+            }
+        }
+
         await supabase.from('servicios').delete().eq('id', id);
         cargarDatos();
     };
+
+    const totalImagenes = imagenesExistentes.length + nuevasImagenes.length;
 
     if (cargando) {
         return <div className="flex items-center justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full" /></div>;
@@ -100,8 +228,19 @@ export default function AdminServicios() {
                             {servicios.map((serv) => (
                                 <tr key={serv.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                                     <td className="py-3 px-4">
-                                        <p className="font-medium text-gray-800">{serv.nombre}</p>
-                                        {serv.descripcion && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{serv.descripcion}</p>}
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                                                {serv.imagen_url ? (
+                                                    <img src={serv.imagen_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">Sin img</div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-800">{serv.nombre}</p>
+                                                {serv.descripcion && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{serv.descripcion}</p>}
+                                            </div>
+                                        </div>
                                     </td>
                                     <td className="py-3 px-4 text-right font-medium text-gray-800">${serv.precio.toFixed(2)}</td>
                                     <td className="py-3 px-4 text-center hidden sm:table-cell">
@@ -127,7 +266,7 @@ export default function AdminServicios() {
 
             {modalAbierto && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+                    <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-gray-800">{editando ? 'Editar Servicio' : 'Nuevo Servicio'}</h3>
                             <button onClick={cerrarModal} className="p-2 rounded-lg hover:bg-gray-100"><svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
@@ -145,6 +284,72 @@ export default function AdminServicios() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Precio *</label>
                                 <input type="number" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} required className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm" />
                             </div>
+
+                            {/* Galería de imágenes */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Fotos del servicio
+                                    <span className="text-xs text-gray-400 ml-2">({totalImagenes} {totalImagenes === 1 ? 'foto' : 'fotos'})</span>
+                                </label>
+
+                                <div className="grid grid-cols-4 gap-2">
+                                    {/* Imágenes existentes */}
+                                    {imagenesExistentes.map((img) => (
+                                        <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
+                                            <img src={img.imagen_url} alt="" className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => marcarParaEliminar(img)}
+                                                className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                            {imagenesExistentes.indexOf(img) === 0 && imagenesAEliminar.length === 0 && (
+                                                <span className="absolute top-1 left-1 bg-amber-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Principal</span>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {/* Previews de nuevas imágenes */}
+                                    {previews.map((src, i) => (
+                                        <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border border-amber-200 group">
+                                            <img src={src} alt="" className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => eliminarNuevaImagen(i)}
+                                                className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                            <span className="absolute bottom-1 right-1 bg-amber-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Nueva</span>
+                                        </div>
+                                    ))}
+
+                                    {/* Botón agregar */}
+                                    <label className="aspect-square flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 hover:border-amber-400 cursor-pointer transition-colors bg-gray-50 hover:bg-amber-50">
+                                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        <span className="text-[10px] text-gray-400 mt-1">Agregar</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleAgregarImagenes}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
+
+                                <p className="text-[11px] text-gray-400 mt-2">
+                                    La primera foto será la imagen principal. Pasa el cursor sobre una foto para eliminarla.
+                                </p>
+                            </div>
+
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
                                 <span className="text-sm text-gray-700">Activo</span>

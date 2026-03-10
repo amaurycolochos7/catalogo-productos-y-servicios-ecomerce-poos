@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { Producto, Categoria } from '@/lib/types';
+import type { Producto, Categoria, ProductoImagen } from '@/lib/types';
 
 export default function AdminProductos() {
     const [productos, setProductos] = useState<Producto[]>([]);
@@ -20,7 +20,12 @@ export default function AdminProductos() {
     const [categoriaId, setCategoriaId] = useState('');
     const [destacado, setDestacado] = useState(false);
     const [activo, setActivo] = useState(true);
-    const [imagenFile, setImagenFile] = useState<File | null>(null);
+
+    // Galería de imágenes
+    const [nuevasImagenes, setNuevasImagenes] = useState<File[]>([]);
+    const [imagenesExistentes, setImagenesExistentes] = useState<ProductoImagen[]>([]);
+    const [imagenesAEliminar, setImagenesAEliminar] = useState<ProductoImagen[]>([]);
+    const [previews, setPreviews] = useState<string[]>([]);
 
     const supabase = createClient();
 
@@ -39,7 +44,7 @@ export default function AdminProductos() {
         cargarDatos();
     }, [cargarDatos]);
 
-    const abrirModal = (producto?: Producto) => {
+    const abrirModal = async (producto?: Producto) => {
         if (producto) {
             setEditando(producto);
             setNombre(producto.nombre);
@@ -49,6 +54,14 @@ export default function AdminProductos() {
             setCategoriaId(producto.categoria_id || '');
             setDestacado(producto.destacado);
             setActivo(producto.activo);
+
+            // Cargar imágenes existentes de la galería
+            const { data } = await supabase
+                .from('producto_imagenes')
+                .select('*')
+                .eq('producto_id', producto.id)
+                .order('orden');
+            setImagenesExistentes((data as ProductoImagen[]) || []);
         } else {
             setEditando(null);
             setNombre('');
@@ -58,8 +71,11 @@ export default function AdminProductos() {
             setCategoriaId('');
             setDestacado(false);
             setActivo(true);
+            setImagenesExistentes([]);
         }
-        setImagenFile(null);
+        setNuevasImagenes([]);
+        setPreviews([]);
+        setImagenesAEliminar([]);
         setModalAbierto(true);
     };
 
@@ -68,9 +84,38 @@ export default function AdminProductos() {
         setEditando(null);
     };
 
+    const handleAgregarImagenes = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setNuevasImagenes(prev => [...prev, ...files]);
+
+        // Crear previews
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviews(prev => [...prev, reader.result as string]);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Reset input
+        e.target.value = '';
+    };
+
+    const eliminarNuevaImagen = (index: number) => {
+        setNuevasImagenes(prev => prev.filter((_, i) => i !== index));
+        setPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const marcarParaEliminar = (imagen: ProductoImagen) => {
+        setImagenesAEliminar(prev => [...prev, imagen]);
+        setImagenesExistentes(prev => prev.filter(img => img.id !== imagen.id));
+    };
+
     const subirImagen = async (file: File): Promise<string> => {
         const ext = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${ext}`;
+        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
         const { error } = await supabase.storage
             .from('productos')
             .upload(fileName, file);
@@ -89,12 +134,32 @@ export default function AdminProductos() {
         setGuardando(true);
 
         try {
-            let imagenUrl = editando?.imagen_url || null;
-
-            if (imagenFile) {
-                imagenUrl = await subirImagen(imagenFile);
+            // 1. Eliminar imágenes marcadas
+            for (const img of imagenesAEliminar) {
+                // Eliminar del storage
+                const path = img.imagen_url.split('/productos/')[1];
+                if (path) {
+                    await supabase.storage.from('productos').remove([path]);
+                }
+                // Eliminar del DB
+                await supabase.from('producto_imagenes').delete().eq('id', img.id);
             }
 
+            // 2. Subir nuevas imágenes
+            const nuevasUrls: string[] = [];
+            for (const file of nuevasImagenes) {
+                const url = await subirImagen(file);
+                nuevasUrls.push(url);
+            }
+
+            // 3. Determinar imagen principal (primera imagen existente o primera nueva)
+            const todasLasImagenes = [
+                ...imagenesExistentes.map(img => img.imagen_url),
+                ...nuevasUrls
+            ];
+            const imagenPrincipal = todasLasImagenes[0] || null;
+
+            // 4. Guardar producto
             const datos = {
                 nombre,
                 descripcion,
@@ -103,13 +168,27 @@ export default function AdminProductos() {
                 categoria_id: categoriaId || null,
                 destacado,
                 activo,
-                imagen_url: imagenUrl,
+                imagen_url: imagenPrincipal,
             };
+
+            let productoId = editando?.id;
 
             if (editando) {
                 await supabase.from('productos').update(datos).eq('id', editando.id);
             } else {
-                await supabase.from('productos').insert(datos);
+                const { data } = await supabase.from('productos').insert(datos).select('id').single();
+                productoId = data?.id;
+            }
+
+            // 5. Insertar nuevas imágenes en producto_imagenes
+            if (productoId && nuevasUrls.length > 0) {
+                const maxOrden = imagenesExistentes.length;
+                const registros = nuevasUrls.map((url, i) => ({
+                    producto_id: productoId,
+                    imagen_url: url,
+                    orden: maxOrden + i,
+                }));
+                await supabase.from('producto_imagenes').insert(registros);
             }
 
             cerrarModal();
@@ -124,9 +203,27 @@ export default function AdminProductos() {
 
     const eliminar = async (id: string) => {
         if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+
+        // Eliminar imágenes del storage
+        const { data: imagenes } = await supabase
+            .from('producto_imagenes')
+            .select('imagen_url')
+            .eq('producto_id', id);
+
+        if (imagenes) {
+            const paths = imagenes
+                .map(img => img.imagen_url.split('/productos/')[1])
+                .filter(Boolean);
+            if (paths.length > 0) {
+                await supabase.storage.from('productos').remove(paths);
+            }
+        }
+
         await supabase.from('productos').delete().eq('id', id);
         cargarDatos();
     };
+
+    const totalImagenes = imagenesExistentes.length + nuevasImagenes.length;
 
     if (cargando) {
         return (
@@ -315,17 +412,69 @@ export default function AdminProductos() {
                                 </select>
                             </div>
 
+                            {/* Galería de imágenes */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Imagen</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => setImagenFile(e.target.files?.[0] || null)}
-                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-600 hover:file:bg-amber-100"
-                                />
-                                {editando?.imagen_url && !imagenFile && (
-                                    <p className="text-xs text-gray-400 mt-1">Ya tiene imagen. Sube una nueva para reemplazarla.</p>
-                                )}
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Fotos del producto
+                                    <span className="text-xs text-gray-400 ml-2">({totalImagenes} {totalImagenes === 1 ? 'foto' : 'fotos'})</span>
+                                </label>
+
+                                <div className="grid grid-cols-4 gap-2">
+                                    {/* Imágenes existentes */}
+                                    {imagenesExistentes.map((img) => (
+                                        <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
+                                            <img src={img.imagen_url} alt="" className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => marcarParaEliminar(img)}
+                                                className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                            {imagenesExistentes.indexOf(img) === 0 && imagenesAEliminar.length === 0 && (
+                                                <span className="absolute top-1 left-1 bg-amber-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Principal</span>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {/* Previews de nuevas imágenes */}
+                                    {previews.map((src, i) => (
+                                        <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden border border-amber-200 group">
+                                            <img src={src} alt="" className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => eliminarNuevaImagen(i)}
+                                                className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                            <span className="absolute bottom-1 right-1 bg-amber-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Nueva</span>
+                                        </div>
+                                    ))}
+
+                                    {/* Botón agregar */}
+                                    <label className="aspect-square flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 hover:border-amber-400 cursor-pointer transition-colors bg-gray-50 hover:bg-amber-50">
+                                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        <span className="text-[10px] text-gray-400 mt-1">Agregar</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleAgregarImagenes}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
+
+                                <p className="text-[11px] text-gray-400 mt-2">
+                                    La primera foto será la imagen principal del producto. Pasa el cursor sobre una foto para eliminarla.
+                                </p>
                             </div>
 
                             <div className="flex items-center gap-6">

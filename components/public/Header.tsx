@@ -39,10 +39,10 @@ export default function Header({ config }: HeaderProps) {
                     <div className="flex items-center justify-between h-16">
                         <Link href="/" className="flex items-center gap-3 group">
                             {logoUrl ? (
-                                <Image src={logoUrl} alt={nombreNegocio} width={40} height={40} className="rounded-full bg-white p-0.5" />
+                                <Image src={logoUrl} alt={nombreNegocio} width={56} height={56} className="rounded-full bg-white p-0.5" />
                             ) : (
-                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: colorAccento }}>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+                                <div className="w-14 h-14 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: colorAccento }}>
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
                                 </div>
                             )}
                             <div className="hidden sm:block">
