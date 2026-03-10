@@ -92,55 +92,77 @@ function MobilePreview({ config }: { config: ConfigData }) {
     const c = config;
     return (
         <div className="w-full h-full overflow-y-auto text-[10px] leading-tight" style={{ fontFamily: 'system-ui, sans-serif' }}>
-            {/* Barra superior */}
-            <div className="py-1 text-center text-white font-medium" style={{ backgroundColor: c.color_acento, fontSize: '7px' }}>
+            {/* Barra superior - igual que Header.tsx */}
+            <div className="py-0.5 text-center text-white font-medium" style={{ backgroundColor: c.color_acento, fontSize: '6px' }}>
                 Bienvenido a {c.nombre_negocio}
             </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-2 py-1.5 text-white" style={{ backgroundColor: c.color_primario }}>
-                <div className="flex items-center gap-1">
+            {/* Header - mobile: logo + hamburger, sin links */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 text-white" style={{ backgroundColor: c.color_primario }}>
+                <div className="flex items-center gap-1.5">
                     {c.logo_url ? (
-                        <img src={c.logo_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                        <img src={c.logo_url} alt="" className="w-4 h-4 rounded-full object-cover bg-white p-[1px]" />
                     ) : (
                         <div className="w-4 h-4 rounded-full flex items-center justify-center text-[6px] font-bold text-white" style={{ backgroundColor: c.color_acento }}>
                             {c.nombre_negocio.charAt(0)}
                         </div>
                     )}
-                    <span className="font-bold text-[8px]">{c.nombre_negocio}</span>
                 </div>
-                <div className="flex gap-1.5 text-[7px] text-white/70">
-                    <span>Inicio</span>
-                    <span>Catálogo</span>
-                    <span>Contacto</span>
+                {/* Hamburger icon */}
+                <div className="flex flex-col gap-[2px]">
+                    <div className="w-3 h-[1.5px] bg-white rounded-full" />
+                    <div className="w-3 h-[1.5px] bg-white rounded-full" />
+                    <div className="w-3 h-[1.5px] bg-white rounded-full" />
                 </div>
             </div>
 
-            {/* Hero */}
-            <div className="px-3 py-3" style={{ backgroundColor: c.color_fondo }}>
+            {/* Hero section - matching Hero.tsx mobile layout */}
+            <div className="px-3 py-4" style={{ backgroundColor: c.color_fondo }}>
+                {/* Imagen primero en mobile (order-1) */}
                 {c.hero_imagen_url && (
-                    <img src={c.hero_imagen_url} alt="" className="w-full h-16 rounded-lg object-cover mb-2" style={{ objectPosition: c.hero_imagen_posicion }} />
+                    <div className="flex justify-center mb-3">
+                        <div className="relative w-full">
+                            <img
+                                src={c.hero_imagen_url}
+                                alt=""
+                                className="w-full rounded-2xl object-cover shadow-lg"
+                                style={{ aspectRatio: '4/5', maxHeight: '120px', objectPosition: c.hero_imagen_posicion }}
+                            />
+                        </div>
+                    </div>
                 )}
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/70 border border-gray-200/50 mb-1.5">
+
+                {/* Badge */}
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/70 border border-gray-200/50 mb-2">
                     <span className="text-green-500" style={{ fontSize: '5px' }}>●</span>
-                    <span className="text-gray-600" style={{ fontSize: '6px' }}>{c.hero_badge}</span>
+                    <span className="text-gray-600" style={{ fontSize: '6px' }}>{c.hero_badge.replace('● ', '')}</span>
                 </div>
-                <h2 className="font-extrabold text-sm leading-none mb-1" style={{ color: c.color_primario }}>
-                    {c.hero_titulo}
+
+                {/* Título */}
+                <h2 className="font-extrabold leading-tight mb-1" style={{ color: c.color_primario, fontSize: '14px' }}>
+                    {c.hero_titulo.split('.')[0]}
+                    {c.hero_titulo.includes('.') && <span style={{ color: c.color_acento }}>.</span>}
                 </h2>
-                <p className="text-gray-400 mb-2" style={{ fontSize: '7px' }}>{c.hero_subtitulo}</p>
-                <div className="flex gap-1 mb-2">
-                    <span className="px-2 py-0.5 rounded-full text-white font-bold" style={{ backgroundColor: c.color_acento, fontSize: '6px' }}>
+
+                {/* Subtítulo */}
+                <p className="text-gray-500 mb-3 leading-relaxed" style={{ fontSize: '7px' }}>{c.hero_subtitulo}</p>
+
+                {/* Botones */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                    <span className="inline-flex items-center gap-0.5 px-2.5 py-1 rounded-full text-white font-semibold shadow-sm" style={{ backgroundColor: c.color_acento, fontSize: '6px' }}>
                         {c.hero_boton_texto}
+                        <svg className="w-1.5 h-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                     </span>
-                    <span className="px-2 py-0.5 rounded-full font-bold border" style={{ borderColor: c.color_primario, color: c.color_primario, fontSize: '6px' }}>
+                    <span className="px-2.5 py-1 rounded-full font-semibold border" style={{ borderColor: c.color_primario, color: c.color_primario, fontSize: '6px', borderWidth: '1.5px' }}>
                         {c.hero_boton_secundario_texto}
                     </span>
                 </div>
-                <div className="flex gap-3">
+
+                {/* Stats */}
+                <div className="flex gap-4">
                     {c.stats.map((s, i) => (
                         <div key={i} className="text-center">
-                            <p className="font-extrabold text-[9px]" style={{ color: c.color_primario }}>{s.valor}</p>
+                            <p className="font-extrabold" style={{ color: c.color_primario, fontSize: '10px' }}>{s.valor}</p>
                             <p className="text-gray-400 italic" style={{ fontSize: '5px' }}>{s.etiqueta}</p>
                         </div>
                     ))}
@@ -149,34 +171,34 @@ function MobilePreview({ config }: { config: ConfigData }) {
 
             {/* Sección Categorías */}
             <div className="px-3 py-3 bg-white">
-                <h3 className="font-bold text-[9px] text-center mb-1.5" style={{ color: c.color_primario }}>
+                <h3 className="font-bold text-[9px] text-center mb-1" style={{ color: c.color_primario }}>
                     {c.texto_categorias_titulo}
                 </h3>
-                <p className="text-center text-gray-400 mb-2" style={{ fontSize: '6px' }}>{c.texto_categorias_subtitulo}</p>
+                <p className="text-center text-gray-400 mb-2" style={{ fontSize: '5px' }}>{c.texto_categorias_subtitulo}</p>
                 <div className="grid grid-cols-3 gap-1">
                     {['Cat. 1', 'Cat. 2', 'Cat. 3'].map((cat, i) => (
                         <div key={i} className="bg-gray-50 rounded-lg p-1.5 text-center">
-                            <div className="w-5 h-5 mx-auto rounded-md text-white flex items-center justify-center font-bold mb-0.5" style={{ backgroundColor: c.color_acento, fontSize: '6px' }}>
+                            <div className="w-5 h-5 mx-auto rounded-lg text-white flex items-center justify-center font-bold mb-0.5" style={{ backgroundColor: c.color_acento, fontSize: '6px' }}>
                                 {cat.charAt(0)}
                             </div>
-                            <span style={{ fontSize: '6px' }} className="text-gray-600">{cat}</span>
+                            <span style={{ fontSize: '5px' }} className="text-gray-600">{cat}</span>
                         </div>
                     ))}
                 </div>
             </div>
 
             {/* Sección Catálogo */}
-            <div className="px-3 py-3" style={{ backgroundColor: `${c.color_fondo}80` }}>
+            <div className="px-3 py-3" style={{ backgroundColor: c.color_fondo }}>
                 <h3 className="font-bold text-[9px] text-center mb-1" style={{ color: c.color_primario }}>
                     {c.texto_catalogo_titulo}
                 </h3>
-                <p className="text-center text-gray-400 mb-2" style={{ fontSize: '6px' }}>{c.texto_catalogo_subtitulo}</p>
+                <p className="text-center text-gray-400 mb-2" style={{ fontSize: '5px' }}>{c.texto_catalogo_subtitulo}</p>
                 <div className="grid grid-cols-2 gap-1">
                     {[1, 2].map(i => (
-                        <div key={i} className="bg-white rounded-lg overflow-hidden border border-gray-100">
+                        <div key={i} className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                             <div className="aspect-square bg-gray-100" />
                             <div className="p-1">
-                                <p className="font-semibold text-gray-700" style={{ fontSize: '6px' }}>Producto {i}</p>
+                                <p className="font-semibold text-gray-700" style={{ fontSize: '5px' }}>Producto {i}</p>
                                 <p className="font-bold" style={{ color: c.color_acento, fontSize: '7px' }}>$99.00</p>
                             </div>
                         </div>
@@ -189,28 +211,28 @@ function MobilePreview({ config }: { config: ConfigData }) {
                 <h3 className="font-bold text-[9px] text-center mb-1" style={{ color: c.color_primario }}>
                     {c.texto_servicios_titulo}
                 </h3>
-                <p className="text-center text-gray-400 mb-2" style={{ fontSize: '6px' }}>{c.texto_servicios_subtitulo}</p>
-                <div className="bg-gray-50 rounded-lg p-2">
-                    <p className="font-bold" style={{ color: c.color_primario, fontSize: '7px' }}>Servicio ejemplo</p>
-                    <p className="text-gray-400" style={{ fontSize: '5px' }}>Descripción del servicio</p>
+                <p className="text-center text-gray-400 mb-1.5" style={{ fontSize: '5px' }}>{c.texto_servicios_subtitulo}</p>
+                <div className="bg-gray-50 rounded-lg p-1.5">
+                    <p className="font-bold" style={{ color: c.color_primario, fontSize: '6px' }}>Servicio ejemplo</p>
+                    <p className="text-gray-400" style={{ fontSize: '5px' }}>Descripcion del servicio</p>
                 </div>
             </div>
 
             {/* Sección Contacto */}
-            <div className="px-3 py-3" style={{ backgroundColor: `${c.color_fondo}80` }}>
+            <div className="px-3 py-3" style={{ backgroundColor: c.color_fondo }}>
                 <h3 className="font-bold text-[9px] text-center mb-1" style={{ color: c.color_primario }}>
                     {c.texto_contacto_titulo}
                 </h3>
-                <p className="text-center text-gray-400 mb-2" style={{ fontSize: '6px' }}>{c.texto_contacto_subtitulo}</p>
+                <p className="text-center text-gray-400 mb-1.5" style={{ fontSize: '5px' }}>{c.texto_contacto_subtitulo}</p>
                 {c.direccion && (
                     <div className="bg-white rounded-lg p-1.5 mb-1">
-                        <p className="font-semibold" style={{ color: c.color_primario, fontSize: '6px' }}>Dirección</p>
+                        <p className="font-semibold" style={{ color: c.color_primario, fontSize: '6px' }}>Direccion</p>
                         <p className="text-gray-400" style={{ fontSize: '5px' }}>{c.direccion}</p>
                     </div>
                 )}
                 {c.telefono && (
                     <div className="bg-white rounded-lg p-1.5">
-                        <p className="font-semibold" style={{ color: c.color_primario, fontSize: '6px' }}>Teléfono</p>
+                        <p className="font-semibold" style={{ color: c.color_primario, fontSize: '6px' }}>Telefono</p>
                         <p className="text-gray-400" style={{ fontSize: '5px' }}>{c.telefono}</p>
                     </div>
                 )}
@@ -219,11 +241,11 @@ function MobilePreview({ config }: { config: ConfigData }) {
             {/* Footer */}
             <div className="px-3 py-3 text-white" style={{ backgroundColor: c.color_primario }}>
                 <p className="font-bold text-[8px] mb-0.5" style={{ color: c.color_acento }}>{c.nombre_negocio}</p>
-                <p className="text-white/60 mb-1.5" style={{ fontSize: '5px' }}>{c.texto_footer}</p>
+                <p className="text-white/60 mb-1" style={{ fontSize: '5px' }}>{c.texto_footer}</p>
                 <div className="flex gap-1">
-                    {c.redes_sociales.facebook && <div className="w-3 h-3 rounded-full bg-white/10" />}
-                    {c.redes_sociales.instagram && <div className="w-3 h-3 rounded-full bg-white/10" />}
-                    {c.redes_sociales.tiktok && <div className="w-3 h-3 rounded-full bg-white/10" />}
+                    {c.redes_sociales.facebook && <div className="w-3 h-3 rounded-full bg-white/20" />}
+                    {c.redes_sociales.instagram && <div className="w-3 h-3 rounded-full bg-white/20" />}
+                    {c.redes_sociales.tiktok && <div className="w-3 h-3 rounded-full bg-white/20" />}
                 </div>
                 <p className="text-white/30 mt-1" style={{ fontSize: '4px' }}>© {new Date().getFullYear()} {c.nombre_negocio}</p>
             </div>
@@ -484,30 +506,7 @@ export default function ConfiguracionPage() {
                                                 );
                                             })()}
                                         </div>
-                                        {/* Sliders */}
-                                        <div className="flex gap-4 mt-2 max-w-[280px]">
-                                            <div className="flex-1">
-                                                <label className="text-[9px] text-gray-400">Horizontal</label>
-                                                <input type="range" min="0" max="100" value={parseInt(config.hero_imagen_posicion.match(/(\d+)%/)?.[1] || '50')}
-                                                    onChange={e => {
-                                                        const yMatch = config.hero_imagen_posicion.match(/\d+%\s+(\d+)%/);
-                                                        const y = yMatch ? yMatch[1] : '50';
-                                                        setConfig(p => ({ ...p, hero_imagen_posicion: `${e.target.value}% ${y}%` }));
-                                                    }}
-                                                    className="w-full h-1 accent-amber-500" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="text-[9px] text-gray-400">Vertical</label>
-                                                <input type="range" min="0" max="100" value={parseInt(config.hero_imagen_posicion.match(/\d+%\s+(\d+)%/)?.[1] || '50')}
-                                                    onChange={e => {
-                                                        const xMatch = config.hero_imagen_posicion.match(/(\d+)%/);
-                                                        const x = xMatch ? xMatch[1] : '50';
-                                                        setConfig(p => ({ ...p, hero_imagen_posicion: `${x}% ${e.target.value}%` }));
-                                                    }}
-                                                    className="w-full h-1 accent-amber-500" />
-                                            </div>
-                                        </div>
-                                        <button onClick={() => setConfig(p => ({ ...p, hero_imagen_posicion: '50% 50%' }))} className="text-amber-600 hover:text-amber-700 text-[10px] font-medium mt-1">Centrar</button>
+                                        <button onClick={() => setConfig(p => ({ ...p, hero_imagen_posicion: '50% 50%' }))} className="text-amber-600 hover:text-amber-700 text-[10px] font-medium mt-2">Centrar</button>
                                     </div>
                                 )}
                             </div>
