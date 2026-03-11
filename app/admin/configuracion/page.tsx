@@ -13,6 +13,7 @@ interface ConfigData {
     telefono: string;
     logo_url: string;
     direccion: string;
+    mapa_url: string;
     hero_titulo: string;
     hero_subtitulo: string;
     hero_imagen_url: string;
@@ -46,6 +47,7 @@ const configDefaults: ConfigData = {
     telefono: '',
     logo_url: '',
     direccion: '',
+    mapa_url: '',
     hero_titulo: 'Tu Selección de Calidad.',
     hero_subtitulo: 'Productos y Servicios de Origen Familiar.',
     hero_imagen_url: '',
@@ -396,6 +398,15 @@ export default function ConfiguracionPage() {
                             <InputField label="Teléfono" value={config.telefono} onChange={v => setConfig(p => ({ ...p, telefono: v }))} />
                             <div className="md:col-span-2">
                                 <InputField label="Dirección" value={config.direccion} onChange={v => setConfig(p => ({ ...p, direccion: v }))} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <InputField label="URL de Google Maps (embed)" value={config.mapa_url} onChange={v => setConfig(p => ({ ...p, mapa_url: v }))} placeholder="https://www.google.com/maps/embed?pb=..." />
+                                <p className="text-[10px] text-gray-400 mt-1">Abre Google Maps → Compartir → Insertar un mapa → Copia solo la URL del src del iframe</p>
+                                {config.mapa_url && (
+                                    <div className="mt-2 rounded-xl overflow-hidden border border-gray-200">
+                                        <iframe src={config.mapa_url} width="100%" height="150" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div>

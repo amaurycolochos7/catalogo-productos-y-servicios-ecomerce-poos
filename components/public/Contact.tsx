@@ -72,7 +72,7 @@ export default function Contact({ config }: Props) {
                         </div>
                     </div>
 
-                    {/* Botones de contacto */}
+                    {/* Botones de contacto + Mapa */}
                     <div className="space-y-4">
                         {numero && (
                             <a
@@ -108,6 +108,22 @@ export default function Contact({ config }: Props) {
                                     <p className="text-sm text-gray-400">{telefono}</p>
                                 </div>
                             </a>
+                        )}
+
+                        {/* Mapa de Google Maps */}
+                        {config?.mapa_url && (
+                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                                <iframe
+                                    src={config.mapa_url}
+                                    width="100%"
+                                    height="250"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    title="Ubicación del negocio"
+                                />
+                            </div>
                         )}
                     </div>
                 </div>

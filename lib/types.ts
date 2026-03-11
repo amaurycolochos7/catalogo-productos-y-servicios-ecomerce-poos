@@ -59,6 +59,7 @@ export interface Configuracion {
   telefono: string;
   logo_url: string | null;
   direccion: string;
+  mapa_url: string | null;
   horario: Record<string, string>;
 
   // Hero
