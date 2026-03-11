@@ -55,6 +55,22 @@ export default function Contact({ config }: Props) {
                             </div>
                         )}
 
+                        {/* Mapa de Google Maps — justo debajo de la dirección */}
+                        {mapaEmbedUrl && (
+                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                                <iframe
+                                    src={mapaEmbedUrl}
+                                    width="100%"
+                                    height="250"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    title="Ubicación del negocio"
+                                />
+                            </div>
+                        )}
+
                         {/* Horario */}
                         <div className="bg-white rounded-2xl p-5 border border-gray-100">
                             <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colorPrimario }}>
@@ -110,22 +126,6 @@ export default function Contact({ config }: Props) {
                                     <p className="text-sm text-gray-400">{telefono}</p>
                                 </div>
                             </a>
-                        )}
-
-                        {/* Mapa de Google Maps */}
-                        {mapaEmbedUrl && (
-                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                                <iframe
-                                    src={mapaEmbedUrl}
-                                    width="100%"
-                                    height="250"
-                                    style={{ border: 0 }}
-                                    allowFullScreen
-                                    loading="lazy"
-                                    referrerPolicy="no-referrer-when-downgrade"
-                                    title="Ubicación del negocio"
-                                />
-                            </div>
                         )}
                     </div>
                 </div>
