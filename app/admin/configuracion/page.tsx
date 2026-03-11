@@ -267,6 +267,7 @@ export default function ConfiguracionPage() {
     const [mensaje, setMensaje] = useState('');
     const [subiendoLogo, setSubiendoLogo] = useState(false);
     const [subiendoHero, setSubiendoHero] = useState(false);
+    const [resolviendoMapa, setResolviendoMapa] = useState(false);
 
     const supabase = createClient();
 
@@ -327,6 +328,22 @@ export default function ConfiguracionPage() {
             setConfig(prev => ({ ...prev, hero_imagen_url: urlData.publicUrl }));
         }
         setSubiendo(false);
+    }
+
+    async function handleMapaChange(url: string) {
+        setConfig(p => ({ ...p, mapa_url: url }));
+        // Si es un short link de Google Maps, resolverlo via API
+        if (url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps')) {
+            setResolviendoMapa(true);
+            try {
+                const res = await fetch(`/api/resolve-map?url=${encodeURIComponent(url)}`);
+                const data = await res.json();
+                if (data.embedUrl) {
+                    setConfig(p => ({ ...p, mapa_url: data.embedUrl }));
+                }
+            } catch { /* silencioso */ }
+            setResolviendoMapa(false);
+        }
     }
 
     const tabs: { id: Tab; label: string }[] = [
@@ -401,9 +418,11 @@ export default function ConfiguracionPage() {
                                 <InputField label="Dirección" value={config.direccion} onChange={v => setConfig(p => ({ ...p, direccion: v }))} />
                             </div>
                             <div className="md:col-span-2">
-                                <InputField label="Ubicación en Google Maps" value={config.mapa_url} onChange={v => setConfig(p => ({ ...p, mapa_url: v }))} placeholder="Pega aquí el link de Google Maps o escribe la dirección" />
-                                <p className="text-[10px] text-gray-400 mt-1">Abre Google Maps → Busca tu negocio → Compartir → Copia el enlace y pégalo aquí</p>
-                                {config.mapa_url && (
+                                <InputField label="Ubicación en Google Maps" value={config.mapa_url} onChange={handleMapaChange} placeholder="Pega aquí el link de Google Maps o escribe la dirección" />
+                                <p className="text-[10px] text-gray-400 mt-1">
+                                    {resolviendoMapa ? '⏳ Resolviendo ubicación...' : 'Abre Google Maps → Busca tu negocio → Compartir → Copia el enlace y pégalo aquí'}
+                                </p>
+                                {config.mapa_url && !resolviendoMapa && (
                                     <div className="mt-2 rounded-xl overflow-hidden border border-gray-200">
                                         <iframe src={getMapEmbedUrl(config.mapa_url)} width="100%" height="150" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
                                     </div>
