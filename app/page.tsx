@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import Header from '@/components/public/Header';
 import Hero from '@/components/public/Hero';
@@ -41,7 +42,9 @@ export default async function Home() {
       <Header config={config} />
       <Hero config={config} />
       <Categories categorias={categorias} config={config} />
-      <ProductCatalog productos={productos} categorias={categorias} whatsapp={whatsapp} config={config} servicios={servicios} />
+      <Suspense fallback={null}>
+        <ProductCatalog productos={productos} categorias={categorias} whatsapp={whatsapp} config={config} servicios={servicios} />
+      </Suspense>
       <Services servicios={servicios} whatsapp={whatsapp} config={config} />
       <Contact config={config} />
       <Footer config={config} />

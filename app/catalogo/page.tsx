@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import Header from '@/components/public/Header';
 import ProductCatalog from '@/components/public/ProductCatalog';
@@ -35,7 +36,9 @@ export default async function CatalogoPage() {
   return (
     <main>
       <Header config={config} />
-      <ProductCatalog productos={productos} categorias={categorias} whatsapp={whatsapp} config={config} servicios={servicios} />
+      <Suspense fallback={null}>
+        <ProductCatalog productos={productos} categorias={categorias} whatsapp={whatsapp} config={config} servicios={servicios} />
+      </Suspense>
       <Footer config={config} />
       <WhatsAppFloat whatsapp={whatsapp} />
       <CartDrawer whatsapp={whatsapp} colorPrimario={config?.color_primario} colorAccento={config?.color_acento} />
