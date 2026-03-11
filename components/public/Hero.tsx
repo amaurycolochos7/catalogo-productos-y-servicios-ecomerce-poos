@@ -27,13 +27,15 @@ export default function Hero({ config }: HeroProps) {
                 id="inicio"
                 className="relative overflow-hidden min-h-[500px] md:min-h-[600px] flex items-center"
             >
-                {/* Imagen de fondo */}
-                <div
-                    className="absolute inset-0 bg-cover bg-no-repeat"
-                    style={{
-                        backgroundImage: `url(${heroImagen})`,
-                        backgroundPosition: heroPos,
-                    }}
+                {/* Imagen de fondo con carga prioritaria */}
+                <img
+                    src={heroImagen}
+                    alt="Hero"
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="async"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ objectPosition: heroPos }}
                 />
                 {/* Overlay oscuro para legibilidad */}
                 <div className="absolute inset-0 bg-black/50" />
