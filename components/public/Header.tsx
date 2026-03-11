@@ -35,21 +35,20 @@ export default function Header({ config }: HeaderProps) {
             {/* Header principal */}
             <header style={{ backgroundColor: colorPrimario }} className="text-white sticky top-0 z-50 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4">
-                    <div className="flex items-center justify-between h-16">
-                        <Link href="/" className="flex items-center gap-3 group">
+                    <div className="relative flex items-center justify-center h-20">
+                        {/* Logo centrado y más grande */}
+                        <Link href="/" className="flex flex-col items-center gap-1 group">
                             {logoUrl ? (
-                                <img src={logoUrl} alt={nombreNegocio} width={56} height={56} className="rounded-full bg-white p-0.5 object-cover" />
+                                <img src={logoUrl} alt={nombreNegocio} width={72} height={72} className="rounded-full bg-white p-0.5 object-cover" />
                             ) : (
-                                <div className="w-14 h-14 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: colorAccento }}>
-                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+                                <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white" style={{ backgroundColor: colorAccento }}>
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
                                 </div>
                             )}
-                            <div className="hidden sm:block">
-                                <span className="font-bold text-lg group-hover:text-amber-300 transition-colors">{nombreNegocio}</span>
-                            </div>
                         </Link>
 
-                        <nav className="hidden md:flex items-center gap-1">
+                        {/* Nav links desktop - a la derecha */}
+                        <nav className="hidden md:flex items-center gap-1 absolute right-0">
                             {navLinks.map((link) => (
                                 <a key={link.href} href={link.href} className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
                                     {link.label}
@@ -57,9 +56,10 @@ export default function Header({ config }: HeaderProps) {
                             ))}
                         </nav>
 
+                        {/* Hamburger mobile - a la derecha */}
                         <button
                             onClick={() => setMenuAbierto(!menuAbierto)}
-                            className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+                            className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors absolute right-0"
                             aria-label="Abrir menú"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
