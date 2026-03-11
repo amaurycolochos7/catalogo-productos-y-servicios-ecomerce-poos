@@ -17,10 +17,10 @@ export default function Header({ config }: HeaderProps) {
     const colorAccento = config?.color_acento || '#e8a020';
 
     const navLinks = [
-        { href: '#inicio', label: 'Inicio' },
-        { href: '#catalogo', label: 'Catálogo' },
-        { href: '#servicios', label: 'Servicios' },
-        { href: '#contacto', label: 'Contacto' },
+        { href: '/', label: 'Inicio' },
+        { href: '/catalogo', label: 'Catálogo' },
+        { href: '/servicios', label: 'Servicios' },
+        { href: '/contacto', label: 'Contacto' },
     ];
 
     return (

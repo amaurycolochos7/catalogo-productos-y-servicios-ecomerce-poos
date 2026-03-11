@@ -25,10 +25,10 @@ export default function Footer({ config }: Props) {
                         <h3 className="font-bold text-lg mb-3" style={{ color: colorAccento }}>Enlaces Rápidos</h3>
                         <ul className="space-y-2">
                             {[
-                                { href: '#inicio', label: 'Inicio' },
-                                { href: '#catalogo', label: 'Catálogo' },
-                                { href: '#servicios', label: 'Servicios' },
-                                { href: '#contacto', label: 'Contacto' },
+                                { href: '/', label: 'Inicio' },
+                                { href: '/catalogo', label: 'Catálogo' },
+                                { href: '/servicios', label: 'Servicios' },
+                                { href: '/contacto', label: 'Contacto' },
                             ].map((link) => (
                                 <li key={link.href}>
                                     <a href={link.href} className="text-white/60 hover:text-white text-sm transition-colors" style={{ ['--tw-text-opacity' as string]: 1 }}>

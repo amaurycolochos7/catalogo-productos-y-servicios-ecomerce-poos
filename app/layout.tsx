@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BekyStore - Productos y Servicios",
+  title: "Catálogo de Productos y Servicios",
   description: "Explora nuestro catálogo de productos y servicios de calidad. Contacta directamente por WhatsApp para realizar tus compras.",
-  keywords: "bekystore, productos, servicios, WhatsApp, tienda, comprar",
+  keywords: "catálogo, productos, servicios, WhatsApp, comprar",
 };
 
 export default function RootLayout({
