@@ -49,6 +49,11 @@ export default function AdminLogin() {
             return;
         }
 
+        // Guardar timestamp de inicio de sesión (expira en 24h)
+        const ahora = new Date();
+        const expira = new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
+        document.cookie = `admin_login_time=${ahora.toISOString()};path=/;expires=${expira.toUTCString()};SameSite=Lax`;
+
         router.push('/admin');
         router.refresh();
     };

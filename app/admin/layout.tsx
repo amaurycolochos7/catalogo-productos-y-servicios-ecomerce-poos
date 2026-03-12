@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -59,17 +59,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const router = useRouter();
     const [sidebarAbierta, setSidebarAbierta] = useState(false);
 
+    const handleLogout = useCallback(async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        // Eliminar cookie de tiempo de sesión
+        document.cookie = 'admin_login_time=;path=/;max-age=0';
+        router.push('/admin/login');
+        router.refresh();
+    }, [router]);
+
+    // Verificar expiración de sesión cada 60 segundos
+    useEffect(() => {
+        if (pathname === '/admin/login') return;
+
+        const verificarSesion = () => {
+            const cookies = document.cookie.split(';').reduce((acc, c) => {
+                const [key, val] = c.trim().split('=');
+                acc[key] = val;
+                return acc;
+            }, {} as Record<string, string>);
+
+            const loginTime = cookies['admin_login_time'];
+            if (!loginTime) {
+                handleLogout();
+                return;
+            }
+
+            const transcurrido = Date.now() - new Date(loginTime).getTime();
+            const VEINTICUATRO_HORAS = 24 * 60 * 60 * 1000;
+            if (transcurrido > VEINTICUATRO_HORAS) {
+                handleLogout();
+            }
+        };
+
+        // Verificar al cargar
+        verificarSesion();
+
+        // Verificar cada 60 segundos
+        const intervalo = setInterval(verificarSesion, 60 * 1000);
+        return () => clearInterval(intervalo);
+    }, [pathname, handleLogout]);
+
     // No mostrar sidebar en página de login
     if (pathname === '/admin/login') {
         return <>{children}</>;
     }
-
-    const handleLogout = async () => {
-        const supabase = createClient();
-        await supabase.auth.signOut();
-        router.push('/admin/login');
-        router.refresh();
-    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
