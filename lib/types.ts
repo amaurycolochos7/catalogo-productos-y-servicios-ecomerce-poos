@@ -12,6 +12,7 @@ export interface Categoria {
 export interface Producto {
   id: string;
   nombre: string;
+  slug: string;
   descripcion: string | null;
   precio: number;
   stock: number;
@@ -19,6 +20,7 @@ export interface Producto {
   imagen_url: string | null;
   destacado: boolean;
   activo: boolean;
+  precio_descuento: number | null;
   created_at: string;
   categorias?: Categoria;
   imagenes?: ProductoImagen[];
@@ -61,12 +63,14 @@ export interface Configuracion {
   direccion: string;
   mapa_url: string | null;
   horario: Record<string, string>;
+  barra_bienvenida: string;
 
   // Hero
   hero_titulo: string;
   hero_subtitulo: string;
   hero_imagen_url: string | null;
   hero_imagen_posicion: string;
+  hero_carrusel_imagenes: string[];
   hero_badge: string;
   hero_boton_texto: string;
   hero_boton_secundario_texto: string;

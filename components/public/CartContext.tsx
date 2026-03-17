@@ -119,7 +119,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [state.items]);
 
     const totalItems = state.items.reduce((acc, i) => acc + i.cantidad, 0);
-    const totalPrecio = state.items.reduce((acc, i) => acc + i.producto.precio * i.cantidad, 0);
+    const totalPrecio = state.items.reduce((acc, i) => {
+        const precioFinal = (i.producto.precio_descuento != null)
+            ? i.producto.precio_descuento
+            : i.producto.precio;
+        return acc + precioFinal * i.cantidad;
+    }, 0);
 
     const value: CartContextType = {
         state,

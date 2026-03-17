@@ -20,6 +20,12 @@ export default function AdminProductos() {
     const [categoriaId, setCategoriaId] = useState('');
     const [destacado, setDestacado] = useState(false);
     const [activo, setActivo] = useState(true);
+    const [precioDescuento, setPrecioDescuento] = useState('');
+
+    // Filtros
+    const [busqueda, setBusqueda] = useState('');
+    const [filtroCategoria, setFiltroCategoria] = useState('');
+    const [ordenPrecio, setOrdenPrecio] = useState<'' | 'asc' | 'desc'>('');
 
     // Galería de imágenes
     const [nuevasImagenes, setNuevasImagenes] = useState<File[]>([]);
@@ -54,6 +60,7 @@ export default function AdminProductos() {
             setCategoriaId(producto.categoria_id || '');
             setDestacado(producto.destacado);
             setActivo(producto.activo);
+            setPrecioDescuento(producto.precio_descuento ? producto.precio_descuento.toString() : '');
 
             // Cargar imágenes existentes de la galería
             const { data } = await supabase
@@ -71,6 +78,7 @@ export default function AdminProductos() {
             setCategoriaId('');
             setDestacado(false);
             setActivo(true);
+            setPrecioDescuento('');
             setImagenesExistentes([]);
         }
         setNuevasImagenes([]);
@@ -159,15 +167,29 @@ export default function AdminProductos() {
             ];
             const imagenPrincipal = todasLasImagenes[0] || null;
 
-            // 4. Guardar producto
+            // 4. Generar slug a partir del nombre
+            const generarSlug = (texto: string) =>
+                texto
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+                    .replace(/[^a-z0-9\s-]/g, '') // solo letras, números, espacios y guiones
+                    .trim()
+                    .replace(/\s+/g, '-') // espacios a guiones
+                    .replace(/-+/g, '-'); // guiones duplicados
+
+            const slug = generarSlug(nombre);
+
+            // 5. Guardar producto
             const datos = {
                 nombre,
+                slug,
                 descripcion,
                 precio: parseFloat(precio),
                 stock: parseInt(stock),
                 categoria_id: categoriaId || null,
                 destacado,
                 activo,
+                precio_descuento: precioDescuento ? parseFloat(precioDescuento) : null,
                 imagen_url: imagenPrincipal,
             };
 
@@ -233,13 +255,33 @@ export default function AdminProductos() {
         );
     }
 
+    // Filtrar y ordenar productos
+    const productosFiltrados = productos
+        .filter((prod) => {
+            if (busqueda) {
+                const termino = busqueda.toLowerCase();
+                if (!prod.nombre.toLowerCase().includes(termino)) return false;
+            }
+            if (filtroCategoria && prod.categoria_id !== filtroCategoria) return false;
+            return true;
+        })
+        .sort((a, b) => {
+            if (ordenPrecio === 'asc') return a.precio - b.precio;
+            if (ordenPrecio === 'desc') return b.precio - a.precio;
+            return 0;
+        });
+
     return (
         <div>
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800">Productos</h2>
-                    <p className="text-sm text-gray-500">{productos.length} productos en total</p>
+                    <p className="text-sm text-gray-500">
+                        {productosFiltrados.length === productos.length
+                            ? `${productos.length} productos en total`
+                            : `${productosFiltrados.length} de ${productos.length} productos`}
+                    </p>
                 </div>
                 <button
                     onClick={() => abrirModal()}
@@ -250,6 +292,56 @@ export default function AdminProductos() {
                     </svg>
                     Nuevo Producto
                 </button>
+            </div>
+
+            {/* Buscador y Filtros */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <div className="relative flex-1">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                        type="text"
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                        placeholder="Buscar producto..."
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+                    />
+                    {busqueda && (
+                        <button onClick={() => setBusqueda('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
+                <select
+                    value={filtroCategoria}
+                    onChange={(e) => setFiltroCategoria(e.target.value)}
+                    className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-amber-500 bg-white min-w-[160px]"
+                >
+                    <option value="">Todas las categorías</option>
+                    {categorias.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                    ))}
+                </select>
+                <select
+                    value={ordenPrecio}
+                    onChange={(e) => setOrdenPrecio(e.target.value as '' | 'asc' | 'desc')}
+                    className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-amber-500 bg-white min-w-[140px]"
+                >
+                    <option value="">Ordenar precio</option>
+                    <option value="asc">Menor a mayor</option>
+                    <option value="desc">Mayor a menor</option>
+                </select>
+                {(busqueda || filtroCategoria || ordenPrecio) && (
+                    <button
+                        onClick={() => { setBusqueda(''); setFiltroCategoria(''); setOrdenPrecio(''); }}
+                        className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors whitespace-nowrap"
+                    >
+                        Limpiar
+                    </button>
+                )}
             </div>
 
             {/* Tabla */}
@@ -267,7 +359,7 @@ export default function AdminProductos() {
                             </tr>
                         </thead>
                         <tbody>
-                            {productos.map((prod) => (
+                            {productosFiltrados.map((prod) => (
                                 <tr key={prod.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                                     <td className="py-3 px-4">
                                         <div className="flex items-center gap-3">
@@ -288,7 +380,14 @@ export default function AdminProductos() {
                                         {(prod.categorias as unknown as { nombre: string })?.nombre || '—'}
                                     </td>
                                     <td className="py-3 px-4 text-right font-medium text-gray-800">
-                                        ${prod.precio.toFixed(2)}
+                                        {prod.precio_descuento != null ? (
+                                            <div>
+                                                <span className="text-red-600 font-bold">${prod.precio_descuento.toFixed(2)}</span>
+                                                <span className="text-xs text-gray-400 line-through ml-1">${prod.precio.toFixed(2)}</span>
+                                            </div>
+                                        ) : (
+                                            <>${prod.precio.toFixed(2)}</>
+                                        )}
                                     </td>
                                     <td className="py-3 px-4 text-right text-gray-500 hidden sm:table-cell">{prod.stock}</td>
                                     <td className="py-3 px-4 text-center hidden md:table-cell">
@@ -496,6 +595,25 @@ export default function AdminProductos() {
                                     />
                                     <span className="text-sm text-gray-700">Activo</span>
                                 </label>
+                            </div>
+
+                            {/* Descuento / Oferta */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Precio con descuento <span className="text-xs text-gray-400 font-normal">(opcional)</span></label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={precioDescuento}
+                                    onChange={(e) => setPrecioDescuento(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm"
+                                    placeholder="Dejar vacío si no hay descuento"
+                                />
+                                {precio && precioDescuento && parseFloat(precioDescuento) < parseFloat(precio) && (
+                                    <p className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                                        Oferta: {Math.round(((parseFloat(precio) - parseFloat(precioDescuento)) / parseFloat(precio)) * 100)}% de descuento
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex gap-3 pt-4">

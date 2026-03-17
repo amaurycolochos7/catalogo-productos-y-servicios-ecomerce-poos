@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import type { Configuracion } from '@/lib/types';
 
@@ -10,40 +13,85 @@ export default function Hero({ config }: HeroProps) {
     const subtitulo = config?.hero_subtitulo || 'Productos y Servicios de Origen Familiar.';
     const botonTexto = config?.hero_boton_texto || 'Explorar Catálogo';
     const botonSecundario = config?.hero_boton_secundario_texto || 'Contáctanos';
-    const heroImagen = config?.hero_imagen_url;
+    const colorPrimario = config?.color_primario || '#1a365d';
+    const colorAccento = config?.color_acento || '#e8a020';
+    const colorFondo = config?.color_fondo || '#faf5eb';
+    const heroPos = config?.hero_imagen_posicion || 'center center';
     const stats = config?.stats || [
         { valor: '100+', etiqueta: 'Productos' },
         { valor: '500+', etiqueta: 'Clientes felices' },
         { valor: '24/7', etiqueta: 'WhatsApp' },
     ];
-    const colorPrimario = config?.color_primario || '#1a365d';
-    const colorAccento = config?.color_acento || '#e8a020';
-    const colorFondo = config?.color_fondo || '#faf5eb';
-    const heroPos = config?.hero_imagen_posicion || 'center center';
 
-    // Si hay imagen, usar como background con overlay
-    if (heroImagen) {
+    // Carrusel: usar las imágenes del carrusel si existen, o la imagen única del hero
+    const carruselImagenes: string[] = (() => {
+        const imgs = config?.hero_carrusel_imagenes;
+        if (imgs && imgs.length > 0) return imgs;
+        if (config?.hero_imagen_url) return [config.hero_imagen_url];
+        return [];
+    })();
+
+    const tieneImagenes = carruselImagenes.length > 0;
+    const esCarrusel = carruselImagenes.length > 1;
+
+    const [indiceActual, setIndiceActual] = useState(0);
+    const [indiceSiguiente, setIndiceSiguiente] = useState(1);
+    const [transitioning, setTransitioning] = useState(false);
+
+    const avanzar = useCallback(() => {
+        if (!esCarrusel) return;
+        setTransitioning(true);
+        // Después de la transición de fade, actualizamos el índice
+        setTimeout(() => {
+            setIndiceActual(prev => {
+                const nuevo = (prev + 1) % carruselImagenes.length;
+                setIndiceSiguiente((nuevo + 1) % carruselImagenes.length);
+                return nuevo;
+            });
+            setTransitioning(false);
+        }, 1000); // Duración del crossfade
+    }, [esCarrusel, carruselImagenes.length]);
+
+    useEffect(() => {
+        if (!esCarrusel) return;
+        const intervalo = setInterval(avanzar, 5000); // Cambiar cada 5 segundos
+        return () => clearInterval(intervalo);
+    }, [esCarrusel, avanzar]);
+
+    // Si hay imagen(es), usar como background con overlay (con carrusel)
+    if (tieneImagenes) {
         return (
             <section
                 id="inicio"
                 className="relative overflow-hidden min-h-[500px] md:min-h-[600px] flex items-center"
             >
-                {/* Imagen de fondo optimizada con Next.js Image */}
-                <Image
-                    src={heroImagen}
-                    alt="Hero"
-                    fill
-                    priority
-                    quality={75}
-                    sizes="100vw"
-                    className="object-cover"
-                    style={{ objectPosition: heroPos }}
-                />
+                {/* --- Imágenes del Carrusel --- */}
+                {carruselImagenes.map((img, i) => (
+                    <Image
+                        key={i}
+                        src={img}
+                        alt={`Hero ${i + 1}`}
+                        fill
+                        priority={i === 0}
+                        quality={75}
+                        sizes="100vw"
+                        className="object-cover"
+                        style={{
+                            objectPosition: heroPos,
+                            opacity: transitioning
+                                ? (i === indiceActual ? 0 : i === indiceSiguiente ? 1 : 0)
+                                : (i === indiceActual ? 1 : 0),
+                            transition: 'opacity 1s ease-in-out',
+                            zIndex: i === indiceActual || i === indiceSiguiente ? 1 : 0,
+                        }}
+                    />
+                ))}
+
                 {/* Overlay oscuro para legibilidad */}
-                <div className="absolute inset-0 bg-black/50" />
+                <div className="absolute inset-0 bg-black/50" style={{ zIndex: 2 }} />
 
                 {/* Contenido centrado sobre la imagen */}
-                <div className="relative z-10 max-w-7xl mx-auto px-4 py-16 md:py-24 w-full">
+                <div className="relative z-10 max-w-7xl mx-auto px-4 py-16 md:py-24 w-full" style={{ zIndex: 3 }}>
                     <div className="max-w-2xl mx-auto text-center">
                         {/* Título principal */}
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 text-white drop-shadow-lg">
@@ -89,6 +137,34 @@ export default function Hero({ config }: HeroProps) {
                                 </div>
                             ))}
                         </div>
+
+                        {/* Indicadores del carrusel */}
+                        {esCarrusel && (
+                            <div className="flex items-center justify-center gap-2 mt-8">
+                                {carruselImagenes.map((_, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => {
+                                            if (i === indiceActual || transitioning) return;
+                                            setIndiceSiguiente(i);
+                                            setTransitioning(true);
+                                            setTimeout(() => {
+                                                setIndiceActual(i);
+                                                setIndiceSiguiente((i + 1) % carruselImagenes.length);
+                                                setTransitioning(false);
+                                            }, 1000);
+                                        }}
+                                        className="transition-all duration-300 rounded-full"
+                                        style={{
+                                            width: i === indiceActual ? '2rem' : '0.5rem',
+                                            height: '0.5rem',
+                                            backgroundColor: i === indiceActual ? colorAccento : 'rgba(255,255,255,0.5)',
+                                        }}
+                                        aria-label={`Ir a imagen ${i + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>

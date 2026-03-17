@@ -25,8 +25,11 @@ export default function CartDrawer({ whatsapp, colorPrimario = '#1a365d', colorA
         state.items.forEach((item, idx) => {
             msg += `${idx + 1}. *${item.producto.nombre.trim()}*\n`;
             msg += `   Cantidad: ${item.cantidad}\n`;
-            msg += `   Precio: $${item.producto.precio.toFixed(2)} c/u\n`;
-            msg += `   Subtotal: $${(item.producto.precio * item.cantidad).toFixed(2)}\n\n`;
+            const precioUnitario = (item.producto.precio_descuento != null)
+                ? item.producto.precio_descuento
+                : item.producto.precio;
+            msg += `   Precio: $${precioUnitario.toFixed(2)} c/u\n`;
+            msg += `   Subtotal: $${(precioUnitario * item.cantidad).toFixed(2)}\n\n`;
         });
         msg += `---------------\n`;
         msg += `*Total: $${totalPrecio.toFixed(2)}*\n\n`;
@@ -104,8 +107,8 @@ export default function CartDrawer({ whatsapp, colorPrimario = '#1a365d', colorA
                                     <h4 className="text-sm font-semibold truncate" style={{ color: colorPrimario }}>
                                         {item.producto.nombre}
                                     </h4>
-                                    <p className="text-sm font-bold" style={{ color: colorAccento }}>
-                                        ${item.producto.precio.toFixed(2)}
+                                    <p className="text-sm font-bold" style={{ color: (item.producto.precio_descuento != null) ? '#dc2626' : colorAccento }}>
+                                        ${((item.producto.precio_descuento != null) ? item.producto.precio_descuento : item.producto.precio).toFixed(2)}
                                     </p>
 
                                     {/* Controles de cantidad */}
@@ -124,7 +127,7 @@ export default function CartDrawer({ whatsapp, colorPrimario = '#1a365d', colorA
                                             +
                                         </button>
                                         <span className="text-xs text-gray-400 ml-auto">
-                                            ${(item.producto.precio * item.cantidad).toFixed(2)}
+                                            ${(((item.producto.precio_descuento != null) ? item.producto.precio_descuento : item.producto.precio) * item.cantidad).toFixed(2)}
                                         </span>
                                     </div>
                                 </div>
@@ -149,10 +152,9 @@ export default function CartDrawer({ whatsapp, colorPrimario = '#1a365d', colorA
                     <div className="border-t p-4 space-y-3 bg-gray-50">
                         {/* Campo de nombre */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Tu nombre *</label>
                             <input
                                 type="text"
-                                placeholder="Escribe tu nombre completo"
+                                placeholder="Escribe tu nombre"
                                 value={nombreCliente}
                                 onChange={(e) => {
                                     setNombreCliente(e.target.value);

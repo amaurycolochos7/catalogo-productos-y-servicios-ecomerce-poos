@@ -49,7 +49,7 @@ export default function Header({ config }: HeaderProps) {
             {/* Barra superior */}
             <div style={{ backgroundColor: colorAccento }} className="text-white text-sm py-1.5">
                 <p className="text-center font-medium">
-                    Bienvenido a {nombreNegocio}
+                    {config?.barra_bienvenida || `Bienvenido a ${nombreNegocio}`}
                 </p>
             </div>
 

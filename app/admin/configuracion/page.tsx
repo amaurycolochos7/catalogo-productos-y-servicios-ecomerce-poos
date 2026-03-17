@@ -19,6 +19,7 @@ interface ConfigData {
     hero_subtitulo: string;
     hero_imagen_url: string;
     hero_imagen_posicion: string;
+    hero_carrusel_imagenes: string[];
     hero_badge: string;
     hero_boton_texto: string;
     hero_boton_secundario_texto: string;
@@ -39,11 +40,13 @@ interface ConfigData {
     texto_footer: string;
     redes_sociales: { facebook: string; instagram: string; tiktok: string };
     horario: Record<string, string>;
+    barra_bienvenida: string;
 }
 
 const configDefaults: ConfigData = {
     nombre_negocio: 'Mi Negocio',
     slogan: '',
+    barra_bienvenida: '',
     whatsapp_contacto: '',
     telefono: '',
     logo_url: '',
@@ -53,6 +56,7 @@ const configDefaults: ConfigData = {
     hero_subtitulo: 'Productos y Servicios de Origen Familiar.',
     hero_imagen_url: '',
     hero_imagen_posicion: 'center center',
+    hero_carrusel_imagenes: [],
     hero_badge: 'Catálogo disponible',
     hero_boton_texto: 'Explorar Catálogo',
     hero_boton_secundario_texto: 'Contáctanos',
@@ -330,6 +334,25 @@ export default function ConfiguracionPage() {
         setSubiendo(false);
     }
 
+    async function subirImagenCarrusel(file: File, indice: number) {
+        setSubiendoHero(true);
+        const ext = file.name.split('.').pop();
+        const nombre = `carrusel_${indice}_${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from('configuracion').upload(nombre, file, { upsert: true });
+        if (error) {
+            setMensaje(`Error subiendo imagen: ${error.message}`);
+            setSubiendoHero(false);
+            return;
+        }
+        const { data: urlData } = supabase.storage.from('configuracion').getPublicUrl(nombre);
+        setConfig(prev => {
+            const imgs = [...(prev.hero_carrusel_imagenes || [])];
+            imgs[indice] = urlData.publicUrl;
+            return { ...prev, hero_carrusel_imagenes: imgs };
+        });
+        setSubiendoHero(false);
+    }
+
     async function handleMapaChange(url: string) {
         setConfig(p => ({ ...p, mapa_url: url }));
         // Si es un short link de Google Maps, resolverlo via API
@@ -412,6 +435,9 @@ export default function ConfiguracionPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputField label="Nombre del negocio" value={config.nombre_negocio} onChange={v => setConfig(p => ({ ...p, nombre_negocio: v }))} />
                             <InputField label="Slogan" value={config.slogan} onChange={v => setConfig(p => ({ ...p, slogan: v }))} />
+                            <div className="md:col-span-2">
+                                <InputField label="Texto barra de bienvenida" value={config.barra_bienvenida} onChange={v => setConfig(p => ({ ...p, barra_bienvenida: v }))} placeholder="Ej: Bienvenido a Mi Negocio" />
+                            </div>
                             <InputField label="WhatsApp (con código de país)" value={config.whatsapp_contacto} onChange={v => setConfig(p => ({ ...p, whatsapp_contacto: v }))} placeholder="5219998887777" />
                             <InputField label="Teléfono" value={config.telefono} onChange={v => setConfig(p => ({ ...p, telefono: v }))} />
                             <div className="md:col-span-2">
@@ -540,6 +566,46 @@ export default function ConfiguracionPage() {
                                         <button onClick={() => setConfig(p => ({ ...p, hero_imagen_posicion: '50% 50%' }))} className="text-amber-600 hover:text-amber-700 text-[10px] font-medium mt-2">Centrar</button>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                        {/* Sección Carrusel de imágenes */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Carrusel de Imágenes (hasta 3)</label>
+                            <p className="text-[10px] text-gray-400 mb-3">Sube hasta 3 imágenes que rotarán automáticamente en el fondo del Hero. Si no subes ninguna, se usará la imagen del Hero de arriba.</p>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[0, 1, 2].map(i => {
+                                    const imgUrl = config.hero_carrusel_imagenes?.[i];
+                                    return (
+                                        <div key={i} className="flex flex-col items-center gap-1.5">
+                                            <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center">
+                                                {imgUrl ? (
+                                                    <img src={imgUrl} alt={`Carrusel ${i + 1}`} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="text-center">
+                                                        <svg className="w-6 h-6 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                        <span className="text-[9px] text-gray-400 mt-0.5 block">Foto {i + 1}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <label className="cursor-pointer px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-[10px] font-medium text-gray-700 transition-colors">
+                                                    {subiendoHero ? '...' : 'Subir'}
+                                                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && subirImagenCarrusel(e.target.files[0], i)} />
+                                                </label>
+                                                {imgUrl && (
+                                                    <button
+                                                        onClick={() => setConfig(p => {
+                                                            const imgs = [...(p.hero_carrusel_imagenes || [])];
+                                                            imgs.splice(i, 1);
+                                                            return { ...p, hero_carrusel_imagenes: imgs };
+                                                        })}
+                                                        className="text-red-400 hover:text-red-600 text-[10px]"
+                                                    >Quitar</button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                         <div>

@@ -14,11 +14,11 @@ import ProductGallery from './ProductGallery';
 export const revalidate = 60;
 
 interface PageProps {
-    params: Promise<{ id: string }>;
+    params: Promise<{ slug: string }>;
 }
 
 export default async function ProductoDetalle({ params }: PageProps) {
-    const { id } = await params;
+    const { slug } = await params;
 
     let producto: Producto | null = null;
     let config: Configuracion | null = null;
@@ -28,10 +28,12 @@ export default async function ProductoDetalle({ params }: PageProps) {
     try {
         const supabase = await createClient();
 
-        const [productoRes, configRes] = await Promise.all([
-            supabase.from('productos').select('*, categorias(nombre)').eq('id', id).single(),
-            supabase.from('configuracion').select('*').limit(1).single(),
-        ]);
+        // Intentar buscar por slug primero, luego por id como fallback
+        let productoRes = await supabase.from('productos').select('*, categorias(nombre)').eq('slug', slug).single();
+        if (!productoRes.data) {
+            productoRes = await supabase.from('productos').select('*, categorias(nombre)').eq('id', slug).single();
+        }
+        const configRes = await supabase.from('configuracion').select('*').limit(1).single();
 
         if (!productoRes.data) {
             notFound();
@@ -44,7 +46,7 @@ export default async function ProductoDetalle({ params }: PageProps) {
         const { data: imagenesData } = await supabase
             .from('producto_imagenes')
             .select('*')
-            .eq('producto_id', id)
+            .eq('producto_id', producto.id)
             .order('orden');
         imagenes = (imagenesData as ProductoImagen[]) || [];
 
@@ -119,11 +121,28 @@ export default async function ProductoDetalle({ params }: PageProps) {
                                 {producto.nombre}
                             </h1>
 
-                            <div className="flex items-baseline gap-2 mb-6">
-                                <span className="text-4xl font-bold text-amber-600">
-                                    ${producto.precio.toFixed(2)}
-                                </span>
-                                <span className="text-sm text-gray-400">MXN</span>
+                            <div className="flex items-baseline gap-2 mb-6 flex-wrap">
+                                {producto.precio_descuento != null ? (
+                                    <>
+                                        <span className="text-4xl font-bold text-red-600">
+                                            ${producto.precio_descuento.toFixed(2)}
+                                        </span>
+                                        <span className="text-xl text-gray-400 line-through">
+                                            ${producto.precio.toFixed(2)}
+                                        </span>
+                                        <span className="px-3 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow animate-pulse">
+                                            ¡Oferta!
+                                        </span>
+                                        <span className="text-sm text-gray-400">MXN</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-4xl font-bold text-amber-600">
+                                            ${producto.precio.toFixed(2)}
+                                        </span>
+                                        <span className="text-sm text-gray-400">MXN</span>
+                                    </>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-2 mb-6 p-3 rounded-xl bg-gray-50">
